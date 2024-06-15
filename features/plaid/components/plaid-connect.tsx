@@ -27,13 +27,16 @@ export const PlaidConnect = () => {
   });
 
   const plaid = usePlaidLink({
-    token: token,
+    token,
     onSuccess: (publicToken) => {
+      if (!publicToken) {
+        return;
+      }
+
       exchangePublicToken.mutate({
         publicToken,
       });
     },
-    env: "sandbox",
   });
 
   const onClick = () => {

@@ -13,11 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-const formSchema = insertCategorySchema.pick({
-  name: true,
-});
-
-type FormValues = z.input<typeof formSchema>;
+type FormValues = Pick<z.input<typeof insertCategorySchema>, "name">;
 
 export const NewCategorySheet = () => {
   const { isOpen, onClose } = useNewCategory();

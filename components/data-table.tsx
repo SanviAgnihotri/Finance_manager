@@ -3,17 +3,20 @@
 import * as React from "react"
 import { Trash } from "lucide-react";
 import {
-  ColumnDef,
   ColumnFiltersState,
-  Row,
+  RowData,
   SortingState,
   flexRender,
+} from "@tanstack/react-table"
+import {
+  LegacyColumnDef,
+  LegacyRow,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
+  useLegacyTable,
+} from "@tanstack/react-table/legacy"
 
 import {
   Table,
@@ -27,21 +30,21 @@ import { Input } from "@/components/ui/input"
 import { useConfirm } from "@/hooks/use-confirm";
 import { Button } from "@/components/ui/button"
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
+interface DataTableProps<TData extends RowData> {
+  columns: LegacyColumnDef<TData, unknown>[]
   data: TData[]
   filterKey: string
-  onDelete: (rows: Row<TData>[]) => void;
+  onDelete: (rows: LegacyRow<TData>[]) => void;
   disabled?: boolean;
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends RowData>({
   columns,
   data,
   filterKey,
   onDelete,
   disabled,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
   const [ConfirmDialog, confirm] = useConfirm(
     "Are you sure?",
     "You are about to perform a bulk delete."
@@ -53,7 +56,7 @@ export function DataTable<TData, TValue>({
   )
   const [rowSelection, setRowSelection] = React.useState({})
 
-  const table = useReactTable({
+  const table = useLegacyTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),

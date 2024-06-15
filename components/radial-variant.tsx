@@ -1,13 +1,22 @@
-import { 
-  RadialBar, 
+import {
+  RadialBar,
   RadialBarChart,
-  Legend, 
+  Legend,
   ResponsiveContainer,
+  type LegendPayload,
 } from "recharts";
 
 import { formatCurrency } from "@/lib/utils";
 
 const COLORS = ["#0062FF", "#12C6FF", "#FF647F", "#FF9354"];
+
+const getPayloadNumber = (payload: object | undefined, key: string) => {
+  if (payload && key in payload) {
+    return Number((payload as Record<string, unknown>)[key]);
+  }
+
+  return 0;
+};
 
 type Props = {
   data: {
@@ -44,10 +53,12 @@ export const RadialVariant = ({ data }: Props) => {
           verticalAlign="bottom" 
           align="right"
           iconType="circle"
-          content={({ payload }: any) => {
+          content={({ payload }: { payload?: ReadonlyArray<LegendPayload> }) => {
+            const items = payload ?? [];
+
             return (
               <ul className="flex flex-col space-y-2">
-                {payload.map((entry: any, index: number) => (
+                {items.map((entry, index) => (
                   <li 
                     key={`item-${index}`}
                     className="flex items-center space-x-2"
@@ -61,7 +72,7 @@ export const RadialVariant = ({ data }: Props) => {
                         {entry.value}
                       </span>
                       <span className="text-sm">
-                        {formatCurrency(entry.payload.value)}
+                        {formatCurrency(getPayloadNumber(entry.payload, "value"))}
                       </span>
                     </div>
                   </li>

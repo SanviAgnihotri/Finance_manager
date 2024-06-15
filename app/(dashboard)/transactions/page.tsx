@@ -11,7 +11,6 @@ import { useBulkCreateTransactions } from "@/features/transactions/api/use-bulk-
 
 import { useSelectAccount } from "@/features/accounts/hooks/use-select-account";
 
-import { transactions as transactionSchema } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,15 +22,15 @@ import {
 } from "@/components/ui/card";
 
 import { columns } from "./columns";
-import { ImportCard } from "./import-card";
-import { UploadButton } from "./upload-button";
+import { ImportCard, type ImportedTransaction } from "./import-card";
+import { UploadButton, type ImportResults } from "./upload-button";
 
 enum VARIANTS {
   LIST = "LIST",
   IMPORT = "IMPORT"
 };
 
-const INITIAL_IMPORT_RESULTS = { 
+const INITIAL_IMPORT_RESULTS: ImportResults = {
   data: [],
   errors: [],
   meta: {},
@@ -42,7 +41,7 @@ const TransactionsPage = () => {
   const [variant, setVariant] = useState<VARIANTS>(VARIANTS.LIST);
   const [importResults, setImportResults] = useState(INITIAL_IMPORT_RESULTS);
 
-  const onUpload = (results: typeof INITIAL_IMPORT_RESULTS) => {
+  const onUpload = (results: ImportResults) => {
     console.log({ results });
     setImportResults(results);
     setVariant(VARIANTS.IMPORT);
@@ -64,7 +63,7 @@ const TransactionsPage = () => {
     deleteTransactions.isPending;
 
   const onSubmitImport = async (
-    values: typeof transactionSchema.$inferInsert[],
+    values: ImportedTransaction[],
   ) => {
     const accountId = await confirm();
 

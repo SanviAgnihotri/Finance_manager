@@ -49,37 +49,49 @@ const app = new Hono()
         .where(eq(subscriptions.userId, auth.userId));
 
       if (existing?.subscriptionId) {
-        const subscription = await getSubscription(
-          existing.subscriptionId,
-        );
-        const portalUrl = subscription.data?.data.attributes.urls.customer_portal;
+        let portalUrl: string | undefined;
+
+        try {
+          const subscription = await getSubscription(
+            existing.subscriptionId,
+          );
+          portalUrl = subscription.data?.data.attributes.urls.customer_portal;
+        } catch (error) {
+          console.error("Lemon Squeezy getSubscription failed:", error);
+        }
 
         if (!portalUrl) {
-          return c.json({ error: "Internal error" }, 500);
+          return c.json({ error: "Could not load the billing portal. The Lemon Squeezy store may not be activated yet." }, 502);
         }
 
         return c.json({ data: portalUrl });
       }
 
-      const checkout = await createCheckout(
-        process.env.LEMONSQUEEZY_STORE_ID!,
-        process.env.LEMONSQUEEZY_PRODUCT_ID!,
-        {
-          checkoutData: {
-            custom: {
-              user_id: auth.userId,
-            },
-          },
-          productOptions: {
-            redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL!}/`,
-          }
-        },
-      );
+      let checkoutUrl: string | undefined;
 
-      const checkoutUrl = checkout.data?.data.attributes.url;
+      try {
+        const checkout = await createCheckout(
+          process.env.LEMONSQUEEZY_STORE_ID!,
+          process.env.LEMONSQUEEZY_PRODUCT_ID!,
+          {
+            checkoutData: {
+              custom: {
+                user_id: auth.userId,
+              },
+            },
+            productOptions: {
+              redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL!}/`,
+            }
+          },
+        );
+
+        checkoutUrl = checkout.data?.data.attributes.url;
+      } catch (error) {
+        console.error("Lemon Squeezy createCheckout failed:", error);
+      }
 
       if (!checkoutUrl) {
-        return c.json({ error: "Internal error" }, 500);
+        return c.json({ error: "Could not create a checkout. The Lemon Squeezy store may not be activated yet." }, 502);
       }
 
       return c.json({ data: checkoutUrl });

@@ -13,11 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-const formSchema = insertAccountSchema.pick({
-  name: true,
-});
-
-type FormValues = z.input<typeof formSchema>;
+type FormValues = Pick<z.input<typeof insertAccountSchema>, "name">;
 
 export const NewAccountSheet = () => {
   const { isOpen, onClose } = useNewAccount();

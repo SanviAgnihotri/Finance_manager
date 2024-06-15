@@ -1,16 +1,25 @@
-import { 
-  Cell, 
-  Legend, 
-  Pie, 
-  PieChart, 
+import {
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
   ResponsiveContainer,
-  Tooltip
+  Tooltip,
+  type LegendPayload,
 } from "recharts";
 
 import { formatPercentage } from "@/lib/utils";
 import { CategoryTooltip } from "@/components/category-tooltip";
 
 const COLORS = ["#0062FF", "#12C6FF", "#FF647F", "#FF9354"];
+
+const getPayloadNumber = (payload: object | undefined, key: string) => {
+  if (payload && key in payload) {
+    return Number((payload as Record<string, unknown>)[key]);
+  }
+
+  return 0;
+};
 
 type Props = {
   data: {
@@ -28,10 +37,12 @@ export const PieVariant = ({ data }: Props) => {
           verticalAlign="bottom" 
           align="right"
           iconType="circle"
-          content={({ payload }: any) => {
+          content={({ payload }: { payload?: ReadonlyArray<LegendPayload> }) => {
+            const items = payload ?? [];
+
             return (
               <ul className="flex flex-col space-y-2">
-                {payload.map((entry: any, index: number) => (
+                {items.map((entry, index) => (
                   <li 
                     key={`item-${index}`}
                     className="flex items-center space-x-2"
@@ -45,7 +56,7 @@ export const PieVariant = ({ data }: Props) => {
                         {entry.value}
                       </span>
                       <span className="text-sm">
-                        {formatPercentage(entry.payload.percent * 100)}
+                        {formatPercentage(getPayloadNumber(entry.payload, "percent") * 100)}
                       </span>
                     </div>
                   </li>

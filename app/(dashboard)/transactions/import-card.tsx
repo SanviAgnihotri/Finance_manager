@@ -28,7 +28,13 @@ interface SelectedColumnsState {
 type Props = {
   data: string[][];
   onCancel: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: ImportedTransaction[]) => void;
+};
+
+export type ImportedTransaction = {
+  amount: number;
+  date: string;
+  payee: string;
 };
 
 export const ImportCard = ({
@@ -87,21 +93,21 @@ export const ImportCard = ({
       }).filter((row) => row.length > 0),
     };
 
-    const arrayOfData = mappedData.body.map((row) => {
-      return row.reduce((acc: any, cell, index) => {
+    const arrayOfData: Record<string, string | null>[] = mappedData.body.map((row) => {
+      return row.reduce<Record<string, string | null>>((acc, cell, index) => {
         const header = mappedData.headers[index];
         if (header !== null) {
           acc[header] = cell;
         }
-        
+
         return acc;
       }, {});
     });
 
-    const formattedData = arrayOfData.map((item) => ({
-      ...item,
-      amount: convertAmountToMiliunits(parseFloat(item.amount)),
-      date: format(parse(item.date, dateFormat, new Date()), outputFormat)
+    const formattedData: ImportedTransaction[] = arrayOfData.map((item) => ({
+      amount: convertAmountToMiliunits(parseFloat(item.amount ?? "")),
+      date: format(parse(item.date ?? "", dateFormat, new Date()), outputFormat),
+      payee: item.payee ?? "",
     }));
 
     onSubmit(formattedData);

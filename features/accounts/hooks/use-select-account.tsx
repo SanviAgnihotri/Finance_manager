@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactElement } from "react";
 
 import { useGetAccounts } from "@/features/accounts/api/use-get-accounts";
 import { useCreateAccount } from "@/features/accounts/api/use-create-account";
@@ -14,7 +14,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 
-export const useSelectAccount = (): [() => JSX.Element, () => Promise<unknown>] => {
+export const useSelectAccount = (): [() => ReactElement, () => Promise<unknown>] => {
   const accountQuery = useGetAccounts();
   const accountMutation = useCreateAccount();
   const onCreateAccount = (name: string) => accountMutation.mutate({
@@ -28,9 +28,9 @@ export const useSelectAccount = (): [() => JSX.Element, () => Promise<unknown>] 
   const [promise, setPromise] = useState<{ 
     resolve: (value: string | undefined) => void 
   } | null>(null);
-  const selectValue = useRef<string>();
+  const selectValue = useRef<string | undefined>(undefined);
 
-  const confirm = () => new Promise((resolve, reject) => {
+  const confirm = () => new Promise((resolve) => {
     setPromise({ resolve });
   });
 

@@ -1,13 +1,23 @@
-import { format } from "date-fns";
-
 import { formatCurrency } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
-export const CategoryTooltip = ({ active, payload }: any) => {
-  if (!active) return null;
+type TooltipEntry = {
+  value?: number | string;
+  payload?: {
+    name?: string;
+  };
+};
 
-  const name = payload[0].payload.name;
-  const value = payload[0].value;
+type CategoryTooltipProps = {
+  active?: boolean;
+  payload?: TooltipEntry[];
+};
+
+export const CategoryTooltip = ({ active, payload }: CategoryTooltipProps) => {
+  if (!active || !payload?.length) return null;
+
+  const name = payload[0]?.payload?.name;
+  const value = Number(payload[0]?.value ?? 0);
 
   return (
     <div className="rounded-sm bg-white shadow-sm border overflow-hidden">

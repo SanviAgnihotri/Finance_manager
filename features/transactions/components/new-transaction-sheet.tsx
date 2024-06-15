@@ -20,11 +20,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-const formSchema = insertTransactionSchema.omit({
-  id: true,
-});
-
-type FormValues = z.input<typeof formSchema>;
+type FormValues = Omit<z.input<typeof insertTransactionSchema>, "id">;
 
 export const NewTransactionSheet = () => {
   const { isOpen, onClose } = useNewTransaction();

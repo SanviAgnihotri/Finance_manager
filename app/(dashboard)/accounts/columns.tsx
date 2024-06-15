@@ -2,7 +2,7 @@
 
 import { InferResponseType } from "hono";
 import { ArrowUpDown } from "lucide-react";
-import { ColumnDef } from "@tanstack/react-table";
+import { LegacyColumnDef } from "@tanstack/react-table/legacy";
 
 import { client } from "@/lib/hono";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Actions } from "./actions";
 
 export type ResponseType = InferResponseType<typeof client.api.accounts.$get, 200>["data"][0];
 
-export const columns: ColumnDef<ResponseType>[] = [
+export const columns: LegacyColumnDef<ResponseType>[] = [
   {
     id: "select",
     header: ({ table }) => (
