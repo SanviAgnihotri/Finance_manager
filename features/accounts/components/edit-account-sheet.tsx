@@ -22,11 +22,6 @@ type FormValues = Pick<z.input<typeof insertAccountSchema>, "name">;
 export const EditAccountSheet = () => {
   const { isOpen, onClose, id } = useOpenAccount();
 
-  console.log({
-    isOpen,
-    id,
-  })
-
   const [ConfirmDialog, confirm] = useConfirm(
     "Are you sure?",
     "You are about to delete this account."
