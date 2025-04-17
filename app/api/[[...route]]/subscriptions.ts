@@ -106,16 +106,22 @@ const app = new Hono()
         "sha256",
         process.env.LEMONSQUEEZY_WEBHOOK_SECRET!
       );
+      const signatureHeader = c.req.header("x-signature");
+
+      if (!signatureHeader) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
       const digest = Buffer.from(
         hmac.update(text).digest("hex"),
         "utf8",
       );
       const signature = Buffer.from(
-        c.req.header("x-signature") as string,
+        signatureHeader,
         "utf8"
       );
 
-      if (!crypto.timingSafeEqual(digest, signature)) {
+      if (digest.length !== signature.length || !crypto.timingSafeEqual(digest, signature)) {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
