@@ -74,6 +74,10 @@ const app = new Hono()
           process.env.LEMONSQUEEZY_STORE_ID!,
           process.env.LEMONSQUEEZY_PRODUCT_ID!,
           {
+            // Test checkouts open fine on an unactivated store; live
+            // checkouts 403 until the store is activated. Control with
+            // LEMONSQUEEZY_TEST_MODE=true (dev) / false or unset (live).
+            testMode: process.env.LEMONSQUEEZY_TEST_MODE === "true",
             checkoutData: {
               custom: {
                 user_id: auth.userId,
