@@ -1,0 +1,1 @@
+ALTER TABLE "subscriptions" ADD COLUMN "dodo_customer_id" text;

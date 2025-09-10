@@ -20,9 +20,6 @@ dependencies:
   '@hookform/resolvers':
     specifier: ^5.9.1
     version: 5.9.1(react-hook-form@7.89.0)(zod@4.6.5)
-  '@lemonsqueezy/lemonsqueezy.js':
-    specifier: ^4.0.0
-    version: 4.0.0
   '@neondatabase/serverless':
     specifier: ^1.2.0
     version: 1.2.0
@@ -71,6 +68,9 @@ dependencies:
   date-fns:
     specifier: ^4.4.0
     version: 4.4.0
+  dodopayments:
+    specifier: ^2.53.0
+    version: 2.53.0
   drizzle-orm:
     specifier: ^0.45.3
     version: 0.45.3(@neondatabase/serverless@1.2.0)(pg@8.23.1)
@@ -1789,11 +1789,6 @@ packages:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
-
-  /@lemonsqueezy/lemonsqueezy.js@4.0.0:
-    resolution: {integrity: sha512-xcY1/lDrY7CpIF98WKiL1ElsfoVhddP7FT0fw7ssOzrFqQsr44HgolKrQZxd9SywsCPn12OTOUieqDIokI3mFg==}
-    engines: {node: '>=20'}
-    dev: false
 
   /@napi-rs/wasm-runtime@1.2.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
     resolution: {integrity: sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA==}
@@ -3884,6 +3879,13 @@ packages:
     dependencies:
       esutils: 2.0.3
     dev: true
+
+  /dodopayments@2.53.0:
+    resolution: {integrity: sha512-S2RVx9hfBOhFkMp91ca/qHH1lEEDw1rQ9Kag7zX3i/3qaT2RvAFaiMaBTLkUaUUj8/6O8i55SS71X18brnhKuA==}
+    hasBin: true
+    dependencies:
+      standardwebhooks: 1.1.1
+    dev: false
 
   /dom-helpers@5.2.1:
     resolution: {integrity: sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==}

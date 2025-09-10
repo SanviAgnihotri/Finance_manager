@@ -8,9 +8,8 @@ export const usePaywall = () => {
     isLoading: isLoadingSubscription,
   } = useGetSubscription();
 
-  // Dev-only escape hatch for running without an activated Lemon Squeezy
-  // store (LS returns 403 "store has not been activated" until payouts are
-  // approved). Never enable in production.
+  // Dev-only escape hatch for running without a configured Dodo Payments
+  // account. Never enable in production.
   // Set NEXT_PUBLIC_BYPASS_PAYWALL=true in .env.local to use it.
   if (process.env.NEXT_PUBLIC_BYPASS_PAYWALL === "true") {
     return {
@@ -20,7 +19,10 @@ export const usePaywall = () => {
     };
   }
 
-  const shouldBlock = !subscription || subscription.status === "expired";
+  // Dodo subscription statuses: pending | active | on_hold | paused |
+  // cancelled | failed | expired | past_due. Only active (and trialing, kept
+  // for forward-compat) grants access; everything else blocks.
+  const shouldBlock = !subscription || !["active", "trialing"].includes(subscription.status);
 
   return {
     isLoading: isLoadingSubscription,

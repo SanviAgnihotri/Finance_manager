@@ -73,5 +73,6 @@ export const subscriptions = pgTable("subscriptions", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().unique(),
   subscriptionId: text("subscription_id").notNull().unique(),
+  dodoCustomerId: text("dodo_customer_id"),
   status: text("status").notNull(),
 });

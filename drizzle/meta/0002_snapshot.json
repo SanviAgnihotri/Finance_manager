@@ -1,7 +1,5 @@
 {
-  "id": "41dd8bab-91ed-4668-bacf-ca0138f7d0c4",
-  "prevId": "3c60e099-b73d-4f2c-977a-3f46b5760ea8",
-  "version": "6",
+  "version": "7",
   "dialect": "postgresql",
   "tables": {
     "public.accounts": {
@@ -36,7 +34,10 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.categories": {
       "name": "categories",
@@ -70,7 +71,10 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.connected_banks": {
       "name": "connected_banks",
@@ -98,7 +102,10 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.subscriptions": {
       "name": "subscriptions",
@@ -135,19 +142,22 @@
       "uniqueConstraints": {
         "subscriptions_user_id_unique": {
           "name": "subscriptions_user_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "user_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "subscriptions_subscription_id_unique": {
           "name": "subscriptions_subscription_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "subscription_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.transactions": {
       "name": "transactions",
@@ -201,39 +211,48 @@
         "transactions_account_id_accounts_id_fk": {
           "name": "transactions_account_id_accounts_id_fk",
           "tableFrom": "transactions",
-          "tableTo": "accounts",
           "columnsFrom": [
             "account_id"
           ],
+          "tableTo": "accounts",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "transactions_category_id_categories_id_fk": {
           "name": "transactions_category_id_categories_id_fk",
           "tableFrom": "transactions",
-          "tableTo": "categories",
           "columnsFrom": [
             "category_id"
           ],
+          "tableTo": "categories",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {},
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "41dd8bab-91ed-4668-bacf-ca0138f7d0c4",
+  "prevId": "3c60e099-b73d-4f2c-977a-3f46b5760ea8",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

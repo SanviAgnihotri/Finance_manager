@@ -1,18 +1,20 @@
-import crypto from "crypto";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
-import { 
-  createCheckout, 
-  getSubscription
-} from "@lemonsqueezy/lemonsqueezy.js";
 
 import { db } from "@/db/drizzle";
-import { setupLemon } from "@/lib/ls";
+import { getDodo } from "@/lib/dodo";
 import { subscriptions } from "@/db/schema";
 
-setupLemon();
+const getUserIdFromMetadata = (metadata: unknown): string | undefined => {
+  if (metadata && typeof metadata === "object") {
+    const m = metadata as Record<string, unknown>;
+    if (typeof m.userId === "string") return m.userId;
+    if (typeof m.user_id === "string") return m.user_id;
+  }
+  return undefined;
+};
 
 const app = new Hono()
   .get(
@@ -49,53 +51,49 @@ const app = new Hono()
         .where(eq(subscriptions.userId, auth.userId));
 
       if (existing?.subscriptionId) {
+        if (!existing.dodoCustomerId) {
+          return c.json({ error: "No billing customer found for this subscription. Please contact support." }, 502);
+        }
+
         let portalUrl: string | undefined;
 
         try {
-          const subscription = await getSubscription(
-            existing.subscriptionId,
+          const session = await getDodo().customers.customerPortal.create(
+            existing.dodoCustomerId,
+            {
+              return_url: `${process.env.NEXT_PUBLIC_APP_URL!}/settings`,
+            },
           );
-          portalUrl = subscription.data?.data.attributes.urls.customer_portal;
+          portalUrl = session.link;
         } catch (error) {
-          console.error("Lemon Squeezy getSubscription failed:", error);
+          console.error("Dodo customer portal failed:", error);
         }
 
         if (!portalUrl) {
-          return c.json({ error: "Could not load the billing portal. The Lemon Squeezy store may not be activated yet." }, 502);
+          return c.json({ error: "Could not load the billing portal. Please try again later." }, 502);
         }
 
         return c.json({ data: portalUrl });
       }
 
-      let checkoutUrl: string | undefined;
+      let checkoutUrl: string | undefined | null;
 
       try {
-        const checkout = await createCheckout(
-          process.env.LEMONSQUEEZY_STORE_ID!,
-          process.env.LEMONSQUEEZY_PRODUCT_ID!,
-          {
-            // Test checkouts open fine on an unactivated store; live
-            // checkouts 403 until the store is activated. Control with
-            // LEMONSQUEEZY_TEST_MODE=true (dev) / false or unset (live).
-            testMode: process.env.LEMONSQUEEZY_TEST_MODE === "true",
-            checkoutData: {
-              custom: {
-                user_id: auth.userId,
-              },
-            },
-            productOptions: {
-              redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL!}/`,
-            }
-          },
-        );
+        const session = await getDodo().checkoutSessions.create({
+          product_cart: [
+            { product_id: process.env.DODO_PRODUCT_ID!, quantity: 1 },
+          ],
+          metadata: { userId: auth.userId },
+          return_url: `${process.env.NEXT_PUBLIC_APP_URL!}/settings`,
+        });
 
-        checkoutUrl = checkout.data?.data.attributes.url;
+        checkoutUrl = session.checkout_url;
       } catch (error) {
-        console.error("Lemon Squeezy createCheckout failed:", error);
+        console.error("Dodo createCheckout failed:", error);
       }
 
       if (!checkoutUrl) {
-        return c.json({ error: "Could not create a checkout. The Lemon Squeezy store may not be activated yet." }, 502);
+        return c.json({ error: "Could not create a checkout. Please try again later." }, 502);
       }
 
       return c.json({ data: checkoutUrl });
@@ -104,81 +102,96 @@ const app = new Hono()
   .post(
     "/webhook",
     async (c) => {
-      const text = await c.req.text();
+      const rawBody = await c.req.text();
 
-      const hmac = crypto.createHmac(
-        "sha256",
-        process.env.LEMONSQUEEZY_WEBHOOK_SECRET!
-      );
-      const signatureHeader = c.req.header("x-signature");
-
-      if (!signatureHeader) {
+      let event;
+      try {
+        event = getDodo().webhooks.unwrap(rawBody, {
+          headers: {
+            "webhook-id": c.req.header("webhook-id") ?? "",
+            "webhook-signature": c.req.header("webhook-signature") ?? "",
+            "webhook-timestamp": c.req.header("webhook-timestamp") ?? "",
+          },
+        });
+      } catch {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const digest = Buffer.from(
-        hmac.update(text).digest("hex"),
-        "utf8",
-      );
-      const signature = Buffer.from(
-        signatureHeader,
-        "utf8"
-      );
-
-      if (digest.length !== signature.length || !crypto.timingSafeEqual(digest, signature)) {
-        return c.json({ error: "Unauthorized" }, 401);
+      if (!event || typeof event.type !== "string") {
+        return c.json({ error: "Invalid webhook payload" }, 400);
       }
 
-      const payload = JSON.parse(text);
-      const event = payload.meta.event_name;
+      switch (event.type) {
+        case "subscription.active":
+        case "subscription.renewed":
+        case "subscription.updated":
+        case "subscription.cancelled":
+        case "subscription.expired": {
+          const subscriptionId = event.data.subscription_id;
+          const status = event.data.status;
+          const customerId = event.data.customer?.customer_id;
+          const userId = getUserIdFromMetadata(event.data.metadata);
 
-      const subscriptionId = payload.data.id;
-      const userId = payload.meta.custom_data.user_id;
-      const status = payload.data.attributes.status;
+          const [existingRow] = await db
+            .select()
+            .from(subscriptions)
+            .where(eq(subscriptions.subscriptionId, subscriptionId));
 
-      const [existing] = await db
-        .select()
-        .from(subscriptions)
-        .where(eq(subscriptions.subscriptionId, subscriptionId));
-
-      if (event === "subscription_created") {
-        if (existing) {
-          await db
-          .update(subscriptions)
-          .set({
-            status,
-          })
-          .where(eq(subscriptions.subscriptionId, subscriptionId));
-        } else {
-          await db
-            .insert(subscriptions)
-            .values({
-              id: createId(),
-              subscriptionId,
-              userId,
-              status,
-            });
+          if (existingRow) {
+            await db
+              .update(subscriptions)
+              .set({
+                status,
+                ...(customerId ? { dodoCustomerId: customerId } : {}),
+              })
+              .where(eq(subscriptions.subscriptionId, subscriptionId));
+          } else if (userId) {
+            await db
+              .insert(subscriptions)
+              .values({
+                id: createId(),
+                subscriptionId,
+                userId,
+                dodoCustomerId: customerId ?? null,
+                status,
+              });
+          }
+          break;
         }
-      }
+        case "payment.succeeded": {
+          const customerId = event.data.customer?.customer_id;
+          const userId = getUserIdFromMetadata(event.data.metadata);
 
-      if (event === "subscription_updated") {
-        if (existing) {
-          await db
-          .update(subscriptions)
-          .set({
-            status,
-          })
-          .where(eq(subscriptions.subscriptionId, subscriptionId));
-        } else {
-          await db
-            .insert(subscriptions)
-            .values({
-              id: createId(),
-              subscriptionId,
-              userId,
-              status,
-            });
+          for (const subscriptionId of event.data.subscription_ids ?? []) {
+            const [existingRow] = await db
+              .select()
+              .from(subscriptions)
+              .where(eq(subscriptions.subscriptionId, subscriptionId));
+
+            if (existingRow) {
+              await db
+                .update(subscriptions)
+                .set({
+                  status: "active",
+                  ...(customerId ? { dodoCustomerId: customerId } : {}),
+                })
+                .where(eq(subscriptions.subscriptionId, subscriptionId));
+            } else if (userId) {
+              await db
+                .insert(subscriptions)
+                .values({
+                  id: createId(),
+                  subscriptionId,
+                  userId,
+                  dodoCustomerId: customerId ?? null,
+                  status: "active",
+                });
+            }
+          }
+          break;
         }
+        default:
+          break;
       }
 
       return c.json({}, 200);
