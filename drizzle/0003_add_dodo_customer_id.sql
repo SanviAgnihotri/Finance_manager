@@ -1,1 +1,1 @@
-ALTER TABLE "subscriptions" ADD COLUMN "dodo_customer_id" text;
+ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "dodo_customer_id" text;

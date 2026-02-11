@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 
@@ -50,11 +50,7 @@ const app = new Hono()
         .from(subscriptions)
         .where(eq(subscriptions.userId, auth.userId));
 
-      if (existing?.subscriptionId) {
-        if (!existing.dodoCustomerId) {
-          return c.json({ error: "No billing customer found for this subscription. Please contact support." }, 502);
-        }
-
+      if (existing?.subscriptionId && existing.dodoCustomerId) {
         let portalUrl: string | undefined;
 
         try {
@@ -75,6 +71,9 @@ const app = new Hono()
 
         return c.json({ data: portalUrl });
       }
+
+      // No usable Dodo subscription on file (including rows left over from
+      // the previous billing provider) — create a fresh Dodo checkout.
 
       let checkoutUrl: string | undefined | null;
 
@@ -156,6 +155,20 @@ const app = new Hono()
                 status,
               });
           }
+
+          // Remove rows left over from the previous billing provider so
+          // /current never returns a stale subscription for this user.
+          const ownerId = existingRow?.userId ?? userId;
+          if (ownerId) {
+            await db
+              .delete(subscriptions)
+              .where(
+                and(
+                  eq(subscriptions.userId, ownerId),
+                  ne(subscriptions.subscriptionId, subscriptionId),
+                ),
+              );
+          }
           break;
         }
         case "payment.succeeded": {
@@ -186,6 +199,18 @@ const app = new Hono()
                   dodoCustomerId: customerId ?? null,
                   status: "active",
                 });
+            }
+
+            const ownerId = existingRow?.userId ?? userId;
+            if (ownerId) {
+              await db
+                .delete(subscriptions)
+                .where(
+                  and(
+                    eq(subscriptions.userId, ownerId),
+                    ne(subscriptions.subscriptionId, subscriptionId),
+                  ),
+                );
             }
           }
           break;
