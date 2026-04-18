@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 
@@ -120,6 +120,63 @@ const app = new Hono()
         return c.json({ error: "Invalid webhook payload" }, 400);
       }
 
+      // user_id is unique: each user owns exactly one row. A returning
+      // customer may already have a legacy row, so upsert by user, not
+      // by provider subscription id.
+      const upsertSubscription = async (
+        userId: string | undefined,
+        subscriptionId: string,
+        status: string,
+        customerId?: string,
+      ) => {
+        const [bySubscription] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.subscriptionId, subscriptionId));
+
+        if (bySubscription) {
+          await db
+            .update(subscriptions)
+            .set({
+              status,
+              ...(customerId ? { dodoCustomerId: customerId } : {}),
+            })
+            .where(eq(subscriptions.subscriptionId, subscriptionId));
+          return;
+        }
+
+        if (!userId) {
+          console.error(`Dodo webhook: no user to attach subscription ${subscriptionId}`);
+          return;
+        }
+
+        const [byUser] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.userId, userId));
+
+        if (byUser) {
+          await db
+            .update(subscriptions)
+            .set({
+              subscriptionId,
+              status,
+              ...(customerId ? { dodoCustomerId: customerId } : {}),
+            })
+            .where(eq(subscriptions.userId, userId));
+        } else {
+          await db
+            .insert(subscriptions)
+            .values({
+              id: createId(),
+              subscriptionId,
+              userId,
+              dodoCustomerId: customerId ?? null,
+              status,
+            });
+        }
+      };
+
       switch (event.type) {
         case "subscription.active":
         case "subscription.renewed":
@@ -131,44 +188,7 @@ const app = new Hono()
           const customerId = event.data.customer?.customer_id;
           const userId = getUserIdFromMetadata(event.data.metadata);
 
-          const [existingRow] = await db
-            .select()
-            .from(subscriptions)
-            .where(eq(subscriptions.subscriptionId, subscriptionId));
-
-          if (existingRow) {
-            await db
-              .update(subscriptions)
-              .set({
-                status,
-                ...(customerId ? { dodoCustomerId: customerId } : {}),
-              })
-              .where(eq(subscriptions.subscriptionId, subscriptionId));
-          } else if (userId) {
-            await db
-              .insert(subscriptions)
-              .values({
-                id: createId(),
-                subscriptionId,
-                userId,
-                dodoCustomerId: customerId ?? null,
-                status,
-              });
-          }
-
-          // Remove rows left over from the previous billing provider so
-          // /current never returns a stale subscription for this user.
-          const ownerId = existingRow?.userId ?? userId;
-          if (ownerId) {
-            await db
-              .delete(subscriptions)
-              .where(
-                and(
-                  eq(subscriptions.userId, ownerId),
-                  ne(subscriptions.subscriptionId, subscriptionId),
-                ),
-              );
-          }
+          await upsertSubscription(userId, subscriptionId, status, customerId);
           break;
         }
         case "payment.succeeded": {
@@ -176,42 +196,7 @@ const app = new Hono()
           const userId = getUserIdFromMetadata(event.data.metadata);
 
           for (const subscriptionId of event.data.subscription_ids ?? []) {
-            const [existingRow] = await db
-              .select()
-              .from(subscriptions)
-              .where(eq(subscriptions.subscriptionId, subscriptionId));
-
-            if (existingRow) {
-              await db
-                .update(subscriptions)
-                .set({
-                  status: "active",
-                  ...(customerId ? { dodoCustomerId: customerId } : {}),
-                })
-                .where(eq(subscriptions.subscriptionId, subscriptionId));
-            } else if (userId) {
-              await db
-                .insert(subscriptions)
-                .values({
-                  id: createId(),
-                  subscriptionId,
-                  userId,
-                  dodoCustomerId: customerId ?? null,
-                  status: "active",
-                });
-            }
-
-            const ownerId = existingRow?.userId ?? userId;
-            if (ownerId) {
-              await db
-                .delete(subscriptions)
-                .where(
-                  and(
-                    eq(subscriptions.userId, ownerId),
-                    ne(subscriptions.subscriptionId, subscriptionId),
-                  ),
-                );
-            }
+            await upsertSubscription(userId, subscriptionId, "active", customerId);
           }
           break;
         }
