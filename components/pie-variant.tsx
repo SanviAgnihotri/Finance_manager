@@ -13,14 +13,6 @@ import { CategoryTooltip } from "@/components/category-tooltip";
 
 const COLORS = ["#0062FF", "#12C6FF", "#FF647F", "#FF9354"];
 
-const getPayloadNumber = (payload: object | undefined, key: string) => {
-  if (payload && key in payload) {
-    return Number((payload as Record<string, unknown>)[key]);
-  }
-
-  return 0;
-};
-
 type Props = {
   data: {
     name: string;
@@ -29,6 +21,10 @@ type Props = {
 };
 
 export const PieVariant = ({ data }: Props) => {
+  // Recharts v3 legend payloads no longer carry the computed `percent`,
+  // so derive each slice's share from the data itself.
+  const total = data.reduce((sum, entry) => sum + entry.value, 0);
+
   return (
     <ResponsiveContainer width="100%" height={350}>
       <PieChart>
@@ -56,7 +52,7 @@ export const PieVariant = ({ data }: Props) => {
                         {entry.value}
                       </span>
                       <span className="text-sm">
-                        {formatPercentage(getPayloadNumber(entry.payload, "percent") * 100)}
+                        {formatPercentage(total > 0 ? ((data[index]?.value ?? 0) / total) * 100 : 0)}
                       </span>
                     </div>
                   </li>
