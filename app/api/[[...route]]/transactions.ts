@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Hono } from "hono";
-import { parse, subDays } from "date-fns";
+import { parse, startOfMonth, endOfMonth } from "date-fns";
 import { createId } from "@paralleldrive/cuid2";
 import { zValidator } from "@hono/zod-validator";
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
@@ -31,8 +31,8 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const defaultTo = new Date();
-      const defaultFrom = subDays(defaultTo, 30);
+      const defaultTo = endOfMonth(new Date());
+      const defaultFrom = startOfMonth(new Date());
 
       const startDate = from 
         ? parse(from, "yyyy-MM-dd", new Date())

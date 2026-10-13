@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
-import { subDays, parse, differenceInDays } from "date-fns";
+import { subDays, parse, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
 import { and, desc, eq, gte, lt, lte, sql, sum } from "drizzle-orm";
 
 import { db } from "@/db/drizzle";
@@ -29,8 +29,8 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const defaultTo = new Date();
-      const defaultFrom = subDays(defaultTo, 30);
+      const defaultTo = endOfMonth(new Date());
+      const defaultFrom = startOfMonth(new Date());
 
       const startDate = from
         ? parse(from, "yyyy-MM-dd", new Date())

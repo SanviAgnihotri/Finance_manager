@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { format, subDays } from "date-fns"
+import { format, startOfMonth, endOfMonth } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { ChevronDown } from "lucide-react"
 import qs from "query-string";
@@ -30,8 +30,8 @@ export const DateFilter = () => {
   const from = params.get("from") || "";
   const to = params.get("to") || "";
 
-  const defaultTo = new Date();
-  const defaultFrom = subDays(defaultTo, 30);
+  const defaultTo = endOfMonth(new Date());
+  const defaultFrom = startOfMonth(new Date());
 
   const paramState = {
     from: from ? new Date(from) : defaultFrom,
